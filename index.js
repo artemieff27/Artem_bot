@@ -74,6 +74,9 @@ bot.on("message", (msg) => {
     case KEY_OPTIONS.PROGRAMS_3_4:
       state = STATES.START;
       return bot.sendMessage(chatId, KEY_OPTIONS.PROGRAMS_3_4, startReply)
+    case KEY_OPTIONS.REGISTRATION:
+      state = STATES.CHOOSE_AGE
+      break;
     default:
       break;
   }
@@ -81,6 +84,9 @@ bot.on("message", (msg) => {
   switch (state) {
     case STATES.START:
       bot.sendMessage(chatId, "Здарова, выбирай че", startReply);
+      break;
+    case STATES.CHOOSE_AGE:
+      bot.sendMessage(chatId, "Выберите Ваш возраст", startReply);
       break;
     default:
       bot.sendMessage(chatId, "Ошибка!", startReply);
