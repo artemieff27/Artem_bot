@@ -1,0 +1,19 @@
+{
+  "name": "artem",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node-dev index"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "node-telegram-bot-api": "^0.60.0"
+  },
+  "devDependencies": {
+    "node-dev": "^7.4.3"
+  }
+}
