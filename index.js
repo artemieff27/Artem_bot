@@ -1,11 +1,15 @@
 // @ts-check
 require("dotenv").config();
 const TelegramBot = require("node-telegram-bot-api");
-const {Redis} = require("@upstash/redis/with-fetch");
+const { Redis } = require("@upstash/redis/with-fetch");
 
-if(!process.env.TELEGRAM_BOT_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN not set up")
-if(!process.env.UPSTASH_REDIS_REST_URL) throw new Error("UPSTASH_REDIS_REST_URL not set up")
-if(!process.env.UPSTASH_REDIS_REST_TOKEN) throw new Error("TELEGRAM_BOT_TOKEN not set up")
+if (!process.env.TELEGRAM_BOT_TOKEN)
+	throw new Error("TELEGRAM_BOT_TOKEN not set up");
+if (!process.env.UPSTASH_REDIS_REST_URL)
+	throw new Error("UPSTASH_REDIS_REST_URL not set up");
+if (!process.env.UPSTASH_REDIS_REST_TOKEN)
+	throw new Error("TELEGRAM_BOT_TOKEN not set up");
+if (!process.env.ADMIN_KEY) throw new Error("ADMIN_KEY not set up");
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 const redis = Redis.fromEnv();
@@ -15,9 +19,9 @@ const redis = Redis.fromEnv();
  * @returns {Promise<typeof defaultUserData | null>}
  */
 async function getUser(chatId) {
-  const data = await redis.get(chatId.toString());
-  if(!data) return null;
-  return data
+	const data = await redis.get(chatId.toString());
+	if (!data) return null;
+	return data;
 }
 
 /**
@@ -25,223 +29,262 @@ async function getUser(chatId) {
  * @param {typeof defaultUserData} data
  */
 async function updateUser(chatId, data) {
-  await redis.set(chatId.toString(), JSON.stringify(data));
+	await redis.set(chatId.toString(), JSON.stringify(data));
+}
+
+async function getAllAdmins() {
+  const users = await redis.keys("*");
+  const admins = users
+  return admins;
 }
 
 const KEY_OPTIONS = {
-  ABOUT: "О нас",
-  LOCATION_PRICE: "Локация и цена",
-  PROGRAMS: "Программы по возрастам",
-  REGISTRATION: "Запись",
-  BACK: "Назад",
-  FEEDBACK: "Отзывы",
-  CONTACTS: "Контакты",
+	ABOUT: "О нас",
+	LOCATION_PRICE: "Локация и цена",
+	PROGRAMS: "Программы по возрастам",
+	REGISTRATION: "Запись",
+	BACK: "Назад",
+	FEEDBACK: "Отзывы",
+	CONTACTS: "Контакты",
 };
 
 const STATES = {
-  START: "START",
-  // CHOOSE_PROGRAM: "CHOOSE_PROGRAM",
-  CHOOSE_AGE: "CHOOSE_AGE",
-  INPUT_CHILD_NAME: "INPUT_CHILD_NAME",
-  INPUT_PARENT_NAME: "INPUT_PARENT_NAME",
-  CHOOSE_PAYMENT_METHOD: "CHOOSE_PAYMENT_METHOD",
-  CHOOSE_TIME: "CHOOSE_TIME",
-  INPUT_PHONE: "INPUT_PHONE",
-  FINISHED: "FINISHED",
+	START: "START",
+	// CHOOSE_PROGRAM: "CHOOSE_PROGRAM",
+	CHOOSE_AGE: "CHOOSE_AGE",
+	INPUT_CHILD_NAME: "INPUT_CHILD_NAME",
+	INPUT_PARENT_NAME: "INPUT_PARENT_NAME",
+	CHOOSE_PAYMENT_METHOD: "CHOOSE_PAYMENT_METHOD",
+	CHOOSE_TIME: "CHOOSE_TIME",
+	INPUT_PHONE: "INPUT_PHONE",
+	FINISHED: "FINISHED",
 };
 
 const PAYMENT_METHODS = {
-  METHOD_1: "METHOD_1",
-  METHOD_2: "METHOD_2",
-  METHOD_3: "METHOD_3"
-}
+	METHOD_1: "METHOD_1",
+	METHOD_2: "METHOD_2",
+	METHOD_3: "METHOD_3",
+};
 
 const AGES = {
-  "1_2": "1-2",
-  "2_3": "2-3",
-  "3_4": "3-4"
-}
+	1_2: "1-2",
+	2_3: "2-3",
+	3_4: "3-4",
+};
 
 const PROGRAMS = {
-  PROGRAMS_1_2: AGES["1_2"] + " года",
-  PROGRAMS_2_3: AGES["2_3"] + " года",
-  PROGRAMS_3_4: AGES["3_4"] + " года",
+	PROGRAMS_1_2: AGES["1_2"] + " года",
+	PROGRAMS_2_3: AGES["2_3"] + " года",
+	PROGRAMS_3_4: AGES["3_4"] + " года",
 };
 
 const defaultUserData = {
-  state: STATES.START,
-  CHILD_AGE: "",
-  CHIILD_NAME: "",
-  PARENT_NAME: "",
-  PAYMENT_METHOD: "",
-  CHOSEN_TIME: "",
-  PHONE: ""
-}
+	state: STATES.START,
+  isAdmin: false,
+	CHILD_AGE: "",
+	CHIILD_NAME: "",
+	PARENT_NAME: "",
+	PAYMENT_METHOD: "",
+	CHOSEN_TIME: "",
+	PHONE: "",
+};
 
 const startReply = {
-  reply_markup: {
-    keyboard: Object.values(KEY_OPTIONS).map((val) => [{ text: val }]),
-  },
+	reply_markup: {
+		keyboard: Object.values(KEY_OPTIONS).map((val) => [{ text: val }]),
+	},
 };
 
 bot.on("message", async (msg) => {
-  const chatId = msg.chat.id;
-  const message = msg.text;
-  let user = await getUser(chatId);
-  if(!user) {
-    await updateUser(chatId, defaultUserData)
-    user = await getUser(chatId);
-  }
+	const chatId = msg.chat.id;
+	const message = msg.text;
+	let user = await getUser(chatId);
+	if (!user) {
+		await updateUser(chatId, defaultUserData);
+		user = defaultUserData;
+	}
 
-  if(!user) {
-    return bot.sendMessage(chatId, "Произогла ошибка с юзером")
-  }
+	let state = user.state;
+  const isAdmin = user.isAdmin;
+	switch (message) {
+		case "/start":
+			state = STATES.START;
+			break;
+		case process.env.ADMIN_KEY:
+			state = STATES.START;
+      await updateUser(chatId, { ...user, isAdmin: true, state });
+			return bot.sendMessage(chatId, "Вы стали Админом Вам будут приходить новые заявки", {
+				// reply_markup: {
+				// 	keyboard: [[{ text: "Сбросить данные" }], [{ text: "Назад" }]],
+				// },
+			});
+		case KEY_OPTIONS.ABOUT:
+			state = STATES.START;
+			await updateUser(chatId, { ...user, state });
+			return bot.sendMessage(chatId, "Информация о нас", startReply);
+		case KEY_OPTIONS.LOCATION_PRICE:
+			state = STATES.START;
+			await updateUser(chatId, { ...user, state });
+			return bot.sendMessage(chatId, "Информация о лок и цене", startReply);
+		case KEY_OPTIONS.FEEDBACK:
+			state = STATES.START;
+			await updateUser(chatId, { ...user, state });
+			return bot.sendMessage(chatId, "Feedbacks", startReply);
+		case KEY_OPTIONS.CONTACTS:
+			state = STATES.START;
+			await updateUser(chatId, { ...user, state });
+			return bot.sendMessage(chatId, "Contacts", startReply);
+		case KEY_OPTIONS.PROGRAMS:
+			return bot.sendMessage(chatId, "Programs", {
+				reply_markup: {
+					keyboard: [
+						[{ text: PROGRAMS.PROGRAMS_1_2 }],
+						[{ text: PROGRAMS.PROGRAMS_2_3 }],
+						[{ text: PROGRAMS.PROGRAMS_3_4 }],
+					],
+				},
+			});
+		case PROGRAMS.PROGRAMS_1_2:
+			state = STATES.START;
+			await updateUser(chatId, { ...user, state });
+			return bot.sendMessage(chatId, PROGRAMS.PROGRAMS_1_2, startReply);
+		case PROGRAMS.PROGRAMS_2_3:
+			state = STATES.START;
+			await updateUser(chatId, { ...user, state });
+			return bot.sendMessage(chatId, PROGRAMS.PROGRAMS_2_3, startReply);
+		case PROGRAMS.PROGRAMS_3_4:
+			state = STATES.START;
+			await updateUser(chatId, { ...user, state });
+			return bot.sendMessage(chatId, PROGRAMS.PROGRAMS_3_4, startReply);
+		case KEY_OPTIONS.REGISTRATION:
+			state = STATES.CHOOSE_AGE;
+			await updateUser(chatId, { ...user, state });
+			break;
+		case KEY_OPTIONS.BACK:
+			if (state === STATES.CHOOSE_AGE) state = STATES.START;
+			if (state === STATES.INPUT_CHILD_NAME) state = STATES.CHOOSE_AGE;
+			if (state === STATES.INPUT_PARENT_NAME) state = STATES.INPUT_CHILD_NAME;
+			if (state === STATES.CHOOSE_PAYMENT_METHOD)
+				state = STATES.INPUT_PARENT_NAME;
+			if (state === STATES.CHOOSE_TIME) state = STATES.CHOOSE_PAYMENT_METHOD;
+			if (state === STATES.INPUT_PHONE) state = STATES.CHOOSE_TIME;
+			if (state === STATES.FINISHED) state = STATES.INPUT_PHONE;
+			await updateUser(chatId, { ...user, state });
+			break;
+		default:
+			if (!message) break;
+			if (state === STATES.CHOOSE_AGE) {
+				if (!Object.values(AGES).includes(message)) {
+					return bot.sendMessage(
+						chatId,
+						"Пожалуйста, выберите один из вожможных вариантов",
+						{
+							reply_markup: {
+								keyboard: [
+									[
+										{ text: AGES["1_2"] },
+										{ text: AGES["2_3"] },
+										{ text: AGES["3_4"] },
+									],
+								],
+							},
+						},
+					);
+				}
+				state = STATES.INPUT_CHILD_NAME;
+				await updateUser(chatId, { ...user, state, CHILD_AGE: message });
+				break;
+			}
+			if (state === STATES.INPUT_CHILD_NAME) {
+				state = STATES.INPUT_PARENT_NAME;
+				await updateUser(chatId, { ...user, state, CHIILD_NAME: message });
+				break;
+			}
+			if (state === STATES.INPUT_PARENT_NAME) {
+				state = STATES.CHOOSE_PAYMENT_METHOD;
+				await updateUser(chatId, { ...user, state, PARENT_NAME: message });
+				break;
+			}
+			if (state === STATES.CHOOSE_PAYMENT_METHOD) {
+				if (!Object.values(PAYMENT_METHODS).includes(message)) {
+					return bot.sendMessage(
+						chatId,
+						"Пожалуйста, выберите один из вожможных вариантов",
+						{
+							reply_markup: {
+								keyboard: [
+									[
+										{ text: PAYMENT_METHODS.METHOD_1 },
+										{ text: PAYMENT_METHODS.METHOD_2 },
+										{ text: PAYMENT_METHODS.METHOD_3 },
+									],
+								],
+							},
+						},
+					);
+				}
+				state = STATES.CHOOSE_TIME;
+				await updateUser(chatId, { ...user, state, PAYMENT_METHOD: message });
+				break;
+			}
+			if (state === STATES.CHOOSE_TIME) {
+				state = STATES.INPUT_PHONE;
+				await updateUser(chatId, { ...user, state, CHOSEN_TIME: message });
+				break;
+			}
+			if (state === STATES.INPUT_PHONE) {
+				state = STATES.FINISHED;
+				await updateUser(chatId, { ...user, state, INPUT_PHONE: message });
+				break;
+			}
+			break;
+	}
 
-  let state = user.state;
-  switch (message) {
-    case "/start":
-      state = STATES.START;
-      break;
-    case KEY_OPTIONS.ABOUT:
-      state = STATES.START
-      await updateUser(chatId, {...user, state});
-      return bot.sendMessage(chatId, "Информация о нас", startReply);
-    case KEY_OPTIONS.LOCATION_PRICE:
-      state = STATES.START
-      await updateUser(chatId, {...user, state});
-      return bot.sendMessage(chatId, "Информация о лок и цене", startReply);
-    case KEY_OPTIONS.FEEDBACK:
-      state = STATES.START
-      await updateUser(chatId, {...user, state});
-      return bot.sendMessage(chatId, "Feedbacks", startReply);
-    case KEY_OPTIONS.CONTACTS:
-      state = STATES.START
-      await updateUser(chatId, {...user, state});
-      return bot.sendMessage(chatId, "Contacts", startReply);
-    case KEY_OPTIONS.PROGRAMS:
-      return bot.sendMessage(chatId, "Programs", {
-        reply_markup: {
-          keyboard: [
-            [{ text: PROGRAMS.PROGRAMS_1_2 }],
-            [{ text: PROGRAMS.PROGRAMS_2_3 }],
-            [{ text: PROGRAMS.PROGRAMS_3_4 }],
-          ],
-        },
-      });
-    case PROGRAMS.PROGRAMS_1_2:
-      state = STATES.START
-      await updateUser(chatId, {...user, state});
-      return bot.sendMessage(chatId, PROGRAMS.PROGRAMS_1_2, startReply)
-    case PROGRAMS.PROGRAMS_2_3:
-      state = STATES.START
-      await updateUser(chatId, {...user, state});
-      return bot.sendMessage(chatId, PROGRAMS.PROGRAMS_2_3, startReply)
-    case PROGRAMS.PROGRAMS_3_4:
-      state = STATES.START
-      await updateUser(chatId, {...user, state});
-      return bot.sendMessage(chatId, PROGRAMS.PROGRAMS_3_4, startReply)
-    case KEY_OPTIONS.REGISTRATION:
-      state = STATES.CHOOSE_AGE
-      await updateUser(chatId, {...user, state});
-      break;
-    case KEY_OPTIONS.BACK:
-      if(state === STATES.CHOOSE_AGE) state = STATES.START;
-      if(state === STATES.INPUT_CHILD_NAME) state = STATES.CHOOSE_AGE;
-      if(state === STATES.INPUT_PARENT_NAME) state = STATES.INPUT_CHILD_NAME;
-      if(state === STATES.CHOOSE_PAYMENT_METHOD) state = STATES.INPUT_PARENT_NAME;
-      if(state === STATES.CHOOSE_TIME) state = STATES.CHOOSE_PAYMENT_METHOD;
-      if(state === STATES.INPUT_PHONE) state = STATES.CHOOSE_TIME;
-      if(state === STATES.FINISHED) state = STATES.INPUT_PHONE;
-      await updateUser(chatId, {...user, state});
-      break;
-    default:
-      if(!message) break;
-      if(state === STATES.CHOOSE_AGE) {
-        if(!Object.values(AGES).includes(message)) {
-          return bot.sendMessage(chatId, "Пожалуйста, выберите один из вожможных вариантов", {
-            reply_markup: {
-              keyboard: [[{text: AGES["1_2"]}, {text: AGES['2_3']}, {text: AGES["3_4"]}]]
-            }
-          })
-        }
-        state = STATES.INPUT_CHILD_NAME;
-        await updateUser(chatId, {...user, state, CHILD_AGE: message})
-        break;
-      }
-      if(state === STATES.INPUT_CHILD_NAME) {
-        state = STATES.INPUT_PARENT_NAME;
-        await updateUser(chatId, {...user, state, CHIILD_NAME: message});
-        break;
-      }
-      if(state === STATES.INPUT_PARENT_NAME) {
-        state = STATES.CHOOSE_PAYMENT_METHOD;
-        await updateUser(chatId, {...user, state, PARENT_NAME: message});
-        break;
-      }
-      if(state === STATES.CHOOSE_PAYMENT_METHOD) {
-        if(!Object.values(PAYMENT_METHODS).includes(message)) {
-          return bot.sendMessage(chatId, "Пожалуйста, выберите один из вожможных вариантов", {
-            reply_markup: {
-              keyboard: [[{text: PAYMENT_METHODS.METHOD_1}, {text: PAYMENT_METHODS.METHOD_2}, {text: PAYMENT_METHODS.METHOD_3}]]
-            }
-          })
-        }
-        state = STATES.CHOOSE_TIME;
-        await updateUser(chatId, {...user, state, PAYMENT_METHOD: message});
-        break;
-      }
-      if(state === STATES.CHOOSE_TIME) {
-        state = STATES.INPUT_PHONE;
-        await updateUser(chatId, {...user, state, CHOSEN_TIME: message});
-        break;
-      }
-      if(state === STATES.INPUT_PHONE) {
-        state = STATES.FINISHED;
-        await updateUser(chatId, {...user, state, INPUT_PHONE: message});
-        break;
-      }
-      break;
-  }
-
-  switch (state) {
-    case STATES.START:
-      bot.sendMessage(chatId, "Здарова, выбирай че", startReply);
-      break;
-    case STATES.CHOOSE_AGE:
-      bot.sendMessage(chatId, "Выберите Ваш возраст", {
-        reply_markup: {
-          keyboard: [[{text: AGES["1_2"]}, {text: AGES['2_3']}, {text: AGES["3_4"]}]]
-        }
-      });
-      break;
-    case STATES.INPUT_CHILD_NAME:
-      bot.sendMessage(chatId, "Введите имя ребенка", startReply);
-      break;
-    case STATES.INPUT_PARENT_NAME:
-      bot.sendMessage(chatId, "Введите имя родителя", startReply);
-      break;
-    case STATES.CHOOSE_PAYMENT_METHOD:
-      bot.sendMessage(chatId, "Выберите способ оплаты", {
-        reply_markup: {
-          keyboard: [
-            [{ text: PAYMENT_METHODS.METHOD_1 }],
-            [{ text: PAYMENT_METHODS.METHOD_2 }],
-            [{ text: PAYMENT_METHODS.METHOD_3 }],
-          ],
-        },
-      });
-      break;
-    case STATES.CHOOSE_TIME:
-      bot.sendMessage(chatId, "Выберите время", startReply);
-      break;
-    case STATES.INPUT_PHONE:
-      bot.sendMessage(chatId, "Ваш номер телефона", startReply);
-      break;
-    case STATES.FINISHED:
-      bot.sendMessage(chatId, "Поздравляю!", startReply)
-      break;
-    default:
-      bot.sendMessage(chatId, "Ошибка!", startReply);
-      break;
-  }
+	switch (state) {
+		case STATES.START:
+			bot.sendMessage(chatId, "Здарова, выбирай че test", startReply);
+			break;
+		case STATES.CHOOSE_AGE:
+			bot.sendMessage(chatId, "Выберите Ваш возраст", {
+				reply_markup: {
+					keyboard: [
+						[
+							{ text: AGES["1_2"] },
+							{ text: AGES["2_3"] },
+							{ text: AGES["3_4"] },
+						],
+					],
+				},
+			});
+			break;
+		case STATES.INPUT_CHILD_NAME:
+			bot.sendMessage(chatId, "Введите имя ребенка", startReply);
+			break;
+		case STATES.INPUT_PARENT_NAME:
+			bot.sendMessage(chatId, "Введите имя родителя", startReply);
+			break;
+		case STATES.CHOOSE_PAYMENT_METHOD:
+			bot.sendMessage(chatId, "Выберите способ оплаты", {
+				reply_markup: {
+					keyboard: [
+						[{ text: PAYMENT_METHODS.METHOD_1 }],
+						[{ text: PAYMENT_METHODS.METHOD_2 }],
+						[{ text: PAYMENT_METHODS.METHOD_3 }],
+					],
+				},
+			});
+			break;
+		case STATES.CHOOSE_TIME:
+			bot.sendMessage(chatId, "Выберите время", startReply);
+			break;
+		case STATES.INPUT_PHONE:
+			bot.sendMessage(chatId, "Ваш номер телефона", startReply);
+			break;
+		case STATES.FINISHED:
+			bot.sendMessage(chatId, "Поздравляю!", startReply);
+			break;
+		default:
+			bot.sendMessage(chatId, "Ошибка!", startReply);
+			break;
+	}
 });
