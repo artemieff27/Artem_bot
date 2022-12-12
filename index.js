@@ -295,10 +295,10 @@ bot.on("message", async (msg) => {
 			});
 			break;
 		case STATES.INPUT_CHILD_NAME:
-			bot.sendMessage(chatId, "Введите имя ребенка", startReply);
+			bot.sendMessage(chatId, "Введите имя ребенка");
 			break;
 		case STATES.INPUT_PARENT_NAME:
-			bot.sendMessage(chatId, "Введите имя родителя", startReply);
+			bot.sendMessage(chatId, "Введите имя родителя");
 			break;
 		// case STATES.CHOOSE_PAYMENT_METHOD:
 		// 	bot.sendMessage(chatId, "Выберите способ оплаты", {
@@ -316,7 +316,7 @@ bot.on("message", async (msg) => {
 			bot.sendMessage(chatId, "Выберите время", startReply);
 			break;
 		case STATES.INPUT_PHONE:
-			bot.sendMessage(chatId, "Ваш номер телефона", startReply);
+			bot.sendMessage(chatId, "Ваш номер телефона");
 			break;
 		case STATES.FINISHED:
 			notifyAdmins(user);
