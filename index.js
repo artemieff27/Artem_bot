@@ -114,7 +114,7 @@ async function notifyAdmins(user) {
 	}
 	const message = `
     Новая заявка
-    Имя ребенка: ${user.CHILD_NAME}
+    Имя ребенка: ${user.CHIILD_NAME}
     Возраст: ${user.CHILD_AGE}
     Имя родителя: ${user.PARENT_NAME}
     Телефон: ${user.PHONE}
