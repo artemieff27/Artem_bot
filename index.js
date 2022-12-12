@@ -71,9 +71,9 @@ const PAYMENT_METHODS = {
 };
 
 const AGES = {
-	"1_2": "1-2",
-	"2_3": "2-3",
-	"3_4": "3-4",
+	1_2: "1-2",
+	2_3: "2-3",
+	3_4: "3-4",
 };
 
 const PROGRAMS = {
@@ -135,7 +135,7 @@ bot.on("message", async (msg) => {
 	switch (message) {
 		case "/start":
 			state = STATES.START;
-      await updateUser(chatId, { ...user, state });
+			await updateUser(chatId, { ...user, state });
 			break;
 		case process.env.ADMIN_KEY:
 			state = STATES.START;
@@ -283,12 +283,10 @@ bot.on("message", async (msg) => {
 			bot.sendMessage(chatId, "Выберите Ваш возраст", {
 				reply_markup: {
 					keyboard: [
-						[
-							{ text: AGES["1_2"] },
-							{ text: AGES["2_3"] },
-							{ text: AGES["3_4"] },
-							{ text: KEY_OPTIONS.BACK },
-						],
+						[{ text: AGES["1_2"] }],
+						[{ text: AGES["2_3"] }],
+						[{ text: AGES["3_4"] }],
+						[{ text: KEY_OPTIONS.BACK }],
 					],
 				},
 			});
@@ -328,13 +326,13 @@ bot.on("message", async (msg) => {
 });
 
 async function notifyAdminsThatBotHasStarted() {
-  const admins = await getAllAdmins();
-  const message = `
+	const admins = await getAllAdmins();
+	const message = `
     Бот запущен!
   `;
-  admins.forEach((admin) => {
-    bot.sendMessage(admin.chatId, message);
-  });
+	admins.forEach((admin) => {
+		bot.sendMessage(admin.chatId, message);
+	});
 }
 
 notifyAdminsThatBotHasStarted().catch(console.error);
