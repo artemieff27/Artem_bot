@@ -105,26 +105,6 @@ const startReply = {
 /** @type {typeof defaultUserData[] | undefined} */
 let admins;
 
-/**
- * @param {typeof defaultUserData} user
- */
-async function notifyAdmins(user) {
-	if (!admins) {
-		admins = await getAllAdmins();
-	}
-	const message = `
-    Новая заявка
-    Имя ребенка: ${user.CHIILD_NAME}
-    Возраст: ${user.CHILD_AGE}
-    Имя родителя: ${user.PARENT_NAME}
-    Телефон: ${user.PHONE}
-  `;
-	admins.forEach((admin) => {
-		bot.sendMessage(admin.chatId, message);
-		bot.sendContact(admin.chatId, user.PHONE, user.PARENT_NAME);
-	});
-}
-
 bot.on("message", async (msg) => {
 	const chatId = msg.chat.id;
 	const message = msg.text;
@@ -336,6 +316,27 @@ async function notifyAdminsThatBotHasStarted() {
 	console.log(message);
 	admins.forEach((admin) => {
 		bot.sendMessage(admin.chatId, message);
+	});
+}
+
+/**
+ * @param {typeof defaultUserData} user
+ */
+ async function notifyAdmins(user) {
+	if (!admins) {
+		admins = await getAllAdmins();
+	}
+	const message = `
+    Новая заявка
+    Имя ребенка: ${user.CHIILD_NAME}
+    Возраст: ${user.CHILD_AGE}
+    Имя родителя: ${user.PARENT_NAME}
+    Время: ${user.CHOSEN_TIME}
+    Телефон: ${user.PHONE}
+  `;
+	admins.forEach((admin) => {
+		bot.sendMessage(admin.chatId, message);
+		bot.sendContact(admin.chatId, user.PHONE, user.PARENT_NAME);
 	});
 }
 
