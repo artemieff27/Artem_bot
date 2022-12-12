@@ -37,11 +37,11 @@ async function getAllAdmins() {
 	// AND GET THEM USING RANGES 0 -1
 	const userKeys = await redis.keys("*");
 	/** @type {typeof defaultUserData[]} */
-	const users = await Promise.all(
-		userKeys.map((key) => ({ chatId: key, ...redis.get(key) })),
-	);
-	const admins = users.filter((user) => user.isAdmin);
-  console.log({users, admins})
+	const users = await Promise.all(userKeys.map((key) => redis.get(key)));
+	const admins = users
+		.map((user, idx) => ({ ...user, chatId: userKeys[idx] }))
+		.filter((user) => user.isAdmin);
+	console.log({ users, admins });
 	return admins;
 }
 
@@ -329,11 +329,11 @@ bot.on("message", async (msg) => {
 });
 
 async function notifyAdminsThatBotHasStarted() {
-  const admins = await getAllAdmins();
+	const admins = await getAllAdmins();
 	const message = `
   Бот запущен!
   `;
-  console.log(message)
+	console.log(message);
 	admins.forEach((admin) => {
 		bot.sendMessage(admin.chatId, message);
 	});
