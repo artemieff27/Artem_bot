@@ -260,7 +260,7 @@ bot.on("message", async (msg) => {
 
 	switch (state) {
 		case STATES.START:
-			bot.sendMessage(chatId, "Здарова, выбирай че test", startReply);
+			bot.sendMessage(chatId, "Здарова, выбирай ", startReply);
 			break;
 		case STATES.CHOOSE_AGE:
 			bot.sendMessage(chatId, "Выберите Ваш возраст", {
