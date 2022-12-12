@@ -33,9 +33,13 @@ async function updateUser(chatId, data) {
 }
 
 async function getAllAdmins() {
-  const users = await redis.keys("*");
-  const admins = users
-  return admins;
+	// LATER WE CAN USE LIST IN REDIS TO STORE ADMINS IF USERBASE GETS TOO BIG
+	// AND GET THEM USING RANGES 0 -1
+	const userKeys = await redis.keys("*");
+	/** @type {typeof defaultUserData[]} */
+	const users = await Promise.all(userKeys.map((key) => redis.get(key)));
+	const admins = users.filter((user) => user.isAdmin);
+	return admins;
 }
 
 const KEY_OPTIONS = {
@@ -44,7 +48,7 @@ const KEY_OPTIONS = {
 	PROGRAMS: "Программы по возрастам",
 	REGISTRATION: "Запись",
 	BACK: "Назад",
-	FEEDBACK: "Отзывы",
+	// FEEDBACK: "Отзывы",
 	CONTACTS: "Контакты",
 };
 
@@ -80,7 +84,7 @@ const PROGRAMS = {
 
 const defaultUserData = {
 	state: STATES.START,
-  isAdmin: false,
+	isAdmin: false,
 	CHILD_AGE: "",
 	CHIILD_NAME: "",
 	PARENT_NAME: "",
@@ -95,6 +99,29 @@ const startReply = {
 	},
 };
 
+/** @type {typeof defaultUserData[] | undefined} */
+let admins;
+
+/**
+ * @param {typeof defaultUserData} user
+ */
+async function notifyAdmins(user) {
+	if (!admins) {
+		admins = await getAllAdmins();
+	}
+	const message = `
+    Новая заявка
+    Имя ребенка: ${user.CHILD_NAME}
+    Возраст: ${user.CHILD_AGE}
+    Имя родителя: ${user.PARENT_NAME}
+    Телефон: ${user.PHONE}
+  `;
+	admins.forEach((admin) => {
+		bot.sendMessage(admin.chatId, message);
+		bot.sendContact(admin.chatId, user.PHONE, user.PARENT_NAME);
+	});
+}
+
 bot.on("message", async (msg) => {
 	const chatId = msg.chat.id;
 	const message = msg.text;
@@ -105,19 +132,23 @@ bot.on("message", async (msg) => {
 	}
 
 	let state = user.state;
-  const isAdmin = user.isAdmin;
 	switch (message) {
 		case "/start":
 			state = STATES.START;
+      await updateUser(chatId, { ...user, state });
 			break;
 		case process.env.ADMIN_KEY:
 			state = STATES.START;
-      await updateUser(chatId, { ...user, isAdmin: true, state });
-			return bot.sendMessage(chatId, "Вы стали Админом Вам будут приходить новые заявки", {
-				// reply_markup: {
-				// 	keyboard: [[{ text: "Сбросить данные" }], [{ text: "Назад" }]],
-				// },
-			});
+			await updateUser(chatId, { ...user, isAdmin: true, state });
+			return bot.sendMessage(
+				chatId,
+				"Вы стали Админом Вам будут приходить новые заявки",
+				{
+					// reply_markup: {
+					// 	keyboard: [[{ text: "Сбросить данные" }], [{ text: "Назад" }]],
+					// },
+				},
+			);
 		case KEY_OPTIONS.ABOUT:
 			state = STATES.START;
 			await updateUser(chatId, { ...user, state });
@@ -125,7 +156,8 @@ bot.on("message", async (msg) => {
 		case KEY_OPTIONS.LOCATION_PRICE:
 			state = STATES.START;
 			await updateUser(chatId, { ...user, state });
-			return bot.sendMessage(chatId, "Информация о лок и цене", startReply);
+			bot.sendLocation(chatId, 55.753215, 37.622504);
+			return bot.sendMessage(chatId, "Информация о цене", startReply);
 		case KEY_OPTIONS.FEEDBACK:
 			state = STATES.START;
 			await updateUser(chatId, { ...user, state });
@@ -141,6 +173,7 @@ bot.on("message", async (msg) => {
 						[{ text: PROGRAMS.PROGRAMS_1_2 }],
 						[{ text: PROGRAMS.PROGRAMS_2_3 }],
 						[{ text: PROGRAMS.PROGRAMS_3_4 }],
+						[{ text: KEY_OPTIONS.BACK }],
 					],
 				},
 			});
@@ -185,6 +218,7 @@ bot.on("message", async (msg) => {
 										{ text: AGES["1_2"] },
 										{ text: AGES["2_3"] },
 										{ text: AGES["3_4"] },
+										{ text: KEY_OPTIONS.BACK },
 									],
 								],
 							},
@@ -201,32 +235,33 @@ bot.on("message", async (msg) => {
 				break;
 			}
 			if (state === STATES.INPUT_PARENT_NAME) {
-				state = STATES.CHOOSE_PAYMENT_METHOD;
+				state = STATES.CHOOSE_TIME;
 				await updateUser(chatId, { ...user, state, PARENT_NAME: message });
 				break;
 			}
-			if (state === STATES.CHOOSE_PAYMENT_METHOD) {
-				if (!Object.values(PAYMENT_METHODS).includes(message)) {
-					return bot.sendMessage(
-						chatId,
-						"Пожалуйста, выберите один из вожможных вариантов",
-						{
-							reply_markup: {
-								keyboard: [
-									[
-										{ text: PAYMENT_METHODS.METHOD_1 },
-										{ text: PAYMENT_METHODS.METHOD_2 },
-										{ text: PAYMENT_METHODS.METHOD_3 },
-									],
-								],
-							},
-						},
-					);
-				}
-				state = STATES.CHOOSE_TIME;
-				await updateUser(chatId, { ...user, state, PAYMENT_METHOD: message });
-				break;
-			}
+			// if (state === STATES.CHOOSE_PAYMENT_METHOD) {
+			// 	if (!Object.values(PAYMENT_METHODS).includes(message)) {
+			// 		return bot.sendMessage(
+			// 			chatId,
+			// 			"Пожалуйста, выберите один из вожможных вариантов",
+			// 			{
+			// 				reply_markup: {
+			// 					keyboard: [
+			// 						[
+			// 							{ text: PAYMENT_METHODS.METHOD_1 },
+			// 							{ text: PAYMENT_METHODS.METHOD_2 },
+			// 							{ text: PAYMENT_METHODS.METHOD_3 },
+			// 							{ text: KEY_OPTIONS.BACK },
+			// 						],
+			// 					],
+			// 				},
+			// 			},
+			// 		);
+			// 	}
+			// 	state = STATES.CHOOSE_TIME;
+			// 	await updateUser(chatId, { ...user, state, PAYMENT_METHOD: message });
+			// 	break;
+			// }
 			if (state === STATES.CHOOSE_TIME) {
 				state = STATES.INPUT_PHONE;
 				await updateUser(chatId, { ...user, state, CHOSEN_TIME: message });
@@ -252,6 +287,7 @@ bot.on("message", async (msg) => {
 							{ text: AGES["1_2"] },
 							{ text: AGES["2_3"] },
 							{ text: AGES["3_4"] },
+							{ text: KEY_OPTIONS.BACK },
 						],
 					],
 				},
@@ -263,17 +299,18 @@ bot.on("message", async (msg) => {
 		case STATES.INPUT_PARENT_NAME:
 			bot.sendMessage(chatId, "Введите имя родителя", startReply);
 			break;
-		case STATES.CHOOSE_PAYMENT_METHOD:
-			bot.sendMessage(chatId, "Выберите способ оплаты", {
-				reply_markup: {
-					keyboard: [
-						[{ text: PAYMENT_METHODS.METHOD_1 }],
-						[{ text: PAYMENT_METHODS.METHOD_2 }],
-						[{ text: PAYMENT_METHODS.METHOD_3 }],
-					],
-				},
-			});
-			break;
+		// case STATES.CHOOSE_PAYMENT_METHOD:
+		// 	bot.sendMessage(chatId, "Выберите способ оплаты", {
+		// 		reply_markup: {
+		// 			keyboard: [
+		// 				[{ text: PAYMENT_METHODS.METHOD_1 }],
+		// 				[{ text: PAYMENT_METHODS.METHOD_2 }],
+		// 				[{ text: PAYMENT_METHODS.METHOD_3 }],
+		// 				[{ text: KEY_OPTIONS.BACK }],
+		// 			],
+		// 		},
+		// 	});
+		// 	break;
 		case STATES.CHOOSE_TIME:
 			bot.sendMessage(chatId, "Выберите время", startReply);
 			break;
@@ -281,6 +318,7 @@ bot.on("message", async (msg) => {
 			bot.sendMessage(chatId, "Ваш номер телефона", startReply);
 			break;
 		case STATES.FINISHED:
+			notifyAdmins(user);
 			bot.sendMessage(chatId, "Поздравляю!", startReply);
 			break;
 		default:
