@@ -37,7 +37,9 @@ async function getAllAdmins() {
 	// AND GET THEM USING RANGES 0 -1
 	const userKeys = await redis.keys("*");
 	/** @type {typeof defaultUserData[]} */
-	const users = await Promise.all(userKeys.map((key) => redis.get(key)));
+	const users = await Promise.all(
+		userKeys.map((key) => ({ chatId: key, ...redis.get(key) })),
+	);
 	const admins = users.filter((user) => user.isAdmin);
 	return admins;
 }
@@ -269,7 +271,7 @@ bot.on("message", async (msg) => {
 			}
 			if (state === STATES.INPUT_PHONE) {
 				state = STATES.FINISHED;
-				await updateUser(chatId, { ...user, state, INPUT_PHONE: message });
+				await updateUser(chatId, { ...user, state, PHONE: message });
 				break;
 			}
 			break;
