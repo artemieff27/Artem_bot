@@ -41,6 +41,7 @@ async function getAllAdmins() {
 		userKeys.map((key) => ({ chatId: key, ...redis.get(key) })),
 	);
 	const admins = users.filter((user) => user.isAdmin);
+  console.log({users, admins})
 	return admins;
 }
 
@@ -328,10 +329,11 @@ bot.on("message", async (msg) => {
 });
 
 async function notifyAdminsThatBotHasStarted() {
-	const admins = await getAllAdmins();
+  const admins = await getAllAdmins();
 	const message = `
-    Бот запущен!
+  Бот запущен!
   `;
+  console.log(message)
 	admins.forEach((admin) => {
 		bot.sendMessage(admin.chatId, message);
 	});
