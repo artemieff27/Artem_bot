@@ -326,3 +326,15 @@ bot.on("message", async (msg) => {
 			break;
 	}
 });
+
+async function notifyAdminsThatBotHasStarted() {
+  const admins = await getAllAdmins();
+  const message = `
+    Бот запущен!
+  `;
+  admins.forEach((admin) => {
+    bot.sendMessage(admin.chatId, message);
+  });
+}
+
+notifyAdminsThatBotHasStarted().catch(console.error);
