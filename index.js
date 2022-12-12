@@ -71,15 +71,15 @@ const PAYMENT_METHODS = {
 };
 
 const AGES = {
-	1_2: "1-2",
-	2_3: "2-3",
-	3_4: "3-4",
+	"1_2A": "1-2",
+	"2_3A": "2-3",
+	"3_4A": "3-4",
 };
 
 const PROGRAMS = {
-	PROGRAMS_1_2: AGES["1_2"] + " года",
-	PROGRAMS_2_3: AGES["2_3"] + " года",
-	PROGRAMS_3_4: AGES["3_4"] + " года",
+	PROGRAMS_1_2: AGES["1_2A"] + " года",
+	PROGRAMS_2_3: AGES["2_3A"] + " года",
+	PROGRAMS_3_4: AGES["3_4A"] + " года",
 };
 
 const defaultUserData = {
@@ -215,9 +215,9 @@ bot.on("message", async (msg) => {
 							reply_markup: {
 								keyboard: [
 									[
-										{ text: AGES["1_2"] },
-										{ text: AGES["2_3"] },
-										{ text: AGES["3_4"] },
+										{ text: AGES["1_2A"] },
+										{ text: AGES["2_3A"] },
+										{ text: AGES["3_4A"] },
 										{ text: KEY_OPTIONS.BACK },
 									],
 								],
@@ -283,9 +283,9 @@ bot.on("message", async (msg) => {
 			bot.sendMessage(chatId, "Выберите Ваш возраст", {
 				reply_markup: {
 					keyboard: [
-						[{ text: AGES["1_2"] }],
-						[{ text: AGES["2_3"] }],
-						[{ text: AGES["3_4"] }],
+						[{ text: AGES["1_2A"] }],
+						[{ text: AGES["2_3A"] }],
+						[{ text: AGES["3_4A"] }],
 						[{ text: KEY_OPTIONS.BACK }],
 					],
 				},
