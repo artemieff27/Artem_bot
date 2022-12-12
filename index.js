@@ -156,7 +156,7 @@ bot.on("message", async (msg) => {
 		case KEY_OPTIONS.LOCATION_PRICE:
 			state = STATES.START;
 			await updateUser(chatId, { ...user, state });
-			bot.sendLocation(chatId, 55.753215, 37.622504);
+			bot.sendLocation(chatId, 36.6301145, 29.1501351);
 			return bot.sendMessage(chatId, "Информация о цене", startReply);
 		case KEY_OPTIONS.FEEDBACK:
 			state = STATES.START;
